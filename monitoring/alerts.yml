@@ -1,0 +1,117 @@
+# monitoring/alerts.yml — Enclaiv Prometheus alert rules.
+
+groups:
+
+  # ---------------------------------------------------------------------------
+  # Security alerts
+  # ---------------------------------------------------------------------------
+  - name: enclaiv.security
+    rules:
+
+      # -----------------------------------------------------------------------
+      # IsolationCompromised — fires when the proxy detects a request that
+      # bypassed policy enforcement (e.g. a rule-engine bug or misconfiguration
+      # allowed traffic that should have been blocked).
+      # Severity: critical — page immediately.
+      # -----------------------------------------------------------------------
+      - alert: IsolationCompromised
+        expr: |
+          increase(enclaiv_proxy_policy_bypass_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "VM isolation bypass detected"
+          description: >
+            The Enclaiv proxy recorded {{ $value }} policy-bypass event(s) in
+            the last 5 minutes. An agent may have contacted an unauthorised
+            host outside the sandbox. Investigate immediately.
+          runbook_url: "https://docs.enclaiv.io/runbooks/isolation-compromised"
+
+      # -----------------------------------------------------------------------
+      # HighBlockedRate — more than 10 blocked requests in 5 minutes.
+      # This pattern is consistent with a prompt-injection attack attempting
+      # to exfiltrate data by forcing the agent to contact external services.
+      # Severity: warning — investigate promptly.
+      # -----------------------------------------------------------------------
+      - alert: HighBlockedRate
+        expr: |
+          increase(enclaiv_proxy_requests_blocked_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Unusually high blocked-request rate (possible prompt injection)"
+          description: >
+            The Enclaiv proxy blocked {{ $value }} requests in the last 5
+            minutes (threshold: 10). This may indicate a prompt-injection
+            attempt trying to exfiltrate data via unauthorised domains.
+            Session: {{ $labels.session_id }}.
+          runbook_url: "https://docs.enclaiv.io/runbooks/high-blocked-rate"
+
+  # ---------------------------------------------------------------------------
+  # Capacity alerts
+  # ---------------------------------------------------------------------------
+  - name: enclaiv.capacity
+    rules:
+
+      # -----------------------------------------------------------------------
+      # FleetNearCapacity — VM slot utilisation exceeds 85%.
+      # Severity: warning — provision additional capacity.
+      # -----------------------------------------------------------------------
+      - alert: FleetNearCapacity
+        expr: |
+          (
+            enclaiv_fleet_slots_used / enclaiv_fleet_slots_total
+          ) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Fleet utilisation above 85 % — near capacity"
+          description: >
+            Current VM slot utilisation is {{ $value | humanizePercentage }}
+            (threshold: 85 %). New agent launch requests may be delayed or
+            rejected. Scale the fleet or reduce concurrent agent limit.
+          runbook_url: "https://docs.enclaiv.io/runbooks/fleet-near-capacity"
+
+  # ---------------------------------------------------------------------------
+  # Reliability alerts
+  # ---------------------------------------------------------------------------
+  - name: enclaiv.reliability
+    rules:
+
+      # -----------------------------------------------------------------------
+      # ProxyDown — the proxy scrape target is unreachable.
+      # -----------------------------------------------------------------------
+      - alert: ProxyDown
+        expr: up{job="enclaiv_proxy"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Enclaiv proxy is down"
+          description: >
+            Prometheus cannot reach the Enclaiv proxy metrics endpoint.
+            All VM network traffic enforcement is potentially offline.
+          runbook_url: "https://docs.enclaiv.io/runbooks/proxy-down"
+
+      # -----------------------------------------------------------------------
+      # ControlPlaneDown — the control-plane scrape target is unreachable.
+      # -----------------------------------------------------------------------
+      - alert: ControlPlaneDown
+        expr: up{job="enclaiv_control_plane"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Enclaiv control plane is down"
+          description: >
+            Prometheus cannot reach the Enclaiv control-plane metrics endpoint.
+            New agent sessions cannot be launched.
+          runbook_url: "https://docs.enclaiv.io/runbooks/control-plane-down"

@@ -1,0 +1,65 @@
+# mandatory_denies.yaml
+# Paths always stripped from the VM rootfs before an agent is launched.
+# The strip_rootfs.py script resolves these relative to the rootfs root and
+# removes any match (file, directory, or symlink).
+#
+# Rationale: prevent accidental (or malicious) credential leakage through
+# files the host may have inadvertently included in the image build context.
+
+deny_paths:
+  # SSH credentials & known-hosts
+  - .ssh/
+
+  # AWS CLI credentials
+  - .aws/
+
+  # Google Cloud SDK credentials
+  - .config/gcloud/
+
+  # Environment / dotenv files (any depth — strip_rootfs.py does basename match)
+  - .env
+  - .env.local
+  - .env.development
+  - .env.production
+  - .env.test
+
+  # Shell initialisation (may export secrets or alter PATH)
+  - .bashrc
+  - .bash_profile
+  - .bash_history
+  - .zshrc
+  - .zsh_history
+  - .profile
+  - .zprofile
+  - .zshenv
+
+  # Git config (may store PATs / signing keys)
+  - .gitconfig
+  - .gitmodules
+  - .git/config
+  - .git/hooks/
+
+  # IDE / editor config (may store tokens)
+  - .vscode/
+  - .idea/
+
+  # Enclaiv operator config (should never be baked into agent images)
+  - enclaiv.yaml
+  - .enclaiv/
+
+  # NPM / Yarn auth tokens
+  - .npmrc
+  - .yarnrc
+  - .yarnrc.yml
+
+  # pip / PyPI tokens
+  - .pypirc
+
+  # Docker credentials
+  - .docker/config.json
+
+  # Kubernetes config (cluster credentials)
+  - .kube/config
+
+  # Netrc (generic plaintext credentials)
+  - .netrc

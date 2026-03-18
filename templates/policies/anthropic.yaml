@@ -1,0 +1,5 @@
+# Anthropic API policy preset
+# Allows traffic to the Anthropic Messages API endpoint.
+description: "Allow access to the Anthropic API"
+allow:
+  - api.anthropic.com

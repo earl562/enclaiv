@@ -1,0 +1,24 @@
+name: my-agent
+runtime: python:3.11
+
+sandbox:
+  network:
+    allow:
+      - api.anthropic.com
+    deny: []
+  filesystem:
+    writable:
+      - ./output
+      - /tmp
+    deny_read:
+      - ~/.ssh
+      - ~/.aws
+      - .env
+  resources:
+    memory: 512mb
+    cpu: 1
+    timeout: 300s
+
+credentials:
+  - name: ANTHROPIC_API_KEY
+    source: env

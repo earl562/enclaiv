@@ -1,0 +1,41 @@
+# enclaiv.yaml — example agent configuration for testing.
+# Copy this file into your agent project root and customise as needed.
+# DO NOT commit real credentials here — use environment variable references.
+
+name: example-agent
+
+# Runtime environment (matches a supported Unikraft image tag).
+runtime: python:3.11
+
+sandbox:
+  network:
+    # Allowlist of hostnames the agent is permitted to contact.
+    # Wildcard subdomains are supported with a leading '*.' prefix.
+    allow:
+      - api.anthropic.com
+      - arxiv.org
+    # Explicit additional denies (always applied on top of the global deny list).
+    deny: []
+
+  filesystem:
+    # Directories the agent may write to inside the VM.
+    writable:
+      - ./output
+      - /tmp
+    # Paths that must not be readable by the agent even if present in the image.
+    deny_read:
+      - ~/.ssh
+      - ~/.aws
+      - .env
+
+  resources:
+    memory: 512mb
+    cpu: 1
+    # Maximum wall-clock time before the VM is forcibly terminated.
+    timeout: 300s
+
+credentials:
+  # Credentials are injected as environment variables from the specified source.
+  # They are never written to the rootfs or visible in process listings.
+  - name: ANTHROPIC_API_KEY
+    source: env   # read from the operator's shell environment at launch time

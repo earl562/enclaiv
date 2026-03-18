@@ -1,0 +1,7 @@
+# GitHub policy preset
+# Allows access to GitHub's API, web UI, and raw content CDN.
+description: "Allow access to GitHub API, web, and raw content"
+allow:
+  - github.com
+  - api.github.com
+  - "*.githubusercontent.com"

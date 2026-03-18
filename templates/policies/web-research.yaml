@@ -1,0 +1,7 @@
+# Web research policy preset
+# Allows access to academic search and paper repositories.
+description: "Allow access to academic research sites"
+allow:
+  - arxiv.org
+  - scholar.google.com
+  - semanticscholar.org

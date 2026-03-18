@@ -1,0 +1,5 @@
+# OpenAI API policy preset
+# Allows traffic to the OpenAI REST API.
+description: "Allow access to the OpenAI API"
+allow:
+  - api.openai.com

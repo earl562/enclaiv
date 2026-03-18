@@ -1,0 +1,6 @@
+# PyPI policy preset
+# Allows pip to install packages at runtime (use sparingly — prefer Dockerfile installs).
+description: "Allow access to PyPI package index and file hosting"
+allow:
+  - pypi.org
+  - files.pythonhosted.org
