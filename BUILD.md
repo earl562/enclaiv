@@ -77,15 +77,11 @@ The `--enable-nested-virtualization` flag is what gives you `/dev/kvm` inside th
 
 **Step 3 — Open SSH access and connect:**
 ```bash
-MY_IP=$(curl -s -4 icanhazip.com)
-gcloud compute firewall-rules create allow-ssh-enclaiv --allow=tcp:22 --target-tags=enclaiv-dev --source-ranges=$MY_IP/32
+# Allow SSH from your IP only
+gcloud compute firewall-rules create allow-ssh-enclaiv --allow=tcp:22 --target-tags=enclaiv-dev --source-ranges=$(curl -s -4 ifconfig.me)/32
 
 # SSH in
 gcloud compute ssh enclaiv-dev --zone=us-central1-a
-
-# If your home IP changes and you get locked out, update the rule:
-MY_IP=$(curl -s -4 icanhazip.com)
-gcloud compute firewall-rules update allow-ssh-enclaiv --source-ranges=$MY_IP/32
 ```
 
 **Step 4 — Inside the Linux box, install the toolchain:**
@@ -178,52 +174,20 @@ git init
 
 **Why this first:** Everything else depends on agents actually running in VMs. If this doesn't work, nothing works.
 
-### Step 1.1 — Install Docker + BuildKit on the Linux box
-
-kraft uses Docker's BuildKit to process Dockerfiles into unikernel root filesystems. Install it first:
+### Step 1.1 — Run a pre-built unikernel (sanity check)
 
 ```bash
-sudo apt install -y docker.io
-sudo usermod -aG docker $USER
-newgrp docker
+kraft run --arch x86_64 --plat qemu unikraft.org/python3.12:latest
 ```
 
-Then start BuildKit (runs as a Docker container):
-
-```bash
-docker run -d --name buildkitd --privileged moby/buildkit:latest
-```
-
-Tell kraft where to find BuildKit:
-
-```bash
-export KRAFTKIT_BUILDKIT_HOST=docker-container://buildkitd
-echo 'export KRAFTKIT_BUILDKIT_HOST=docker-container://buildkitd' >> ~/.bashrc
-```
-
-Verify:
-
-```bash
-docker ps | grep buildkit
-```
-
-You should see the buildkitd container running.
+You should get a Python REPL. Type `print("hello from unikernel")`. If it works, your kraft + QEMU setup is good.
 
 ### Step 1.2 — Build your own unikernel from a Dockerfile
 
 Create a test agent directory:
 
 ```bash
-mkdir ~/test-agent && cd ~/test-agent
-```
-
-Create three files:
-
-**agent.py:**
-```python
-print("Hello from inside the unikernel!")
-import os
-print(f"Environment vars: {list(os.environ.keys())}")
+mkdir test-agent && cd test-agent
 ```
 
 **Dockerfile:**
@@ -234,78 +198,26 @@ WORKDIR /app
 CMD ["python3", "/app/agent.py"]
 ```
 
+**agent.py:**
+```python
+import os
+print("Hello from inside the unikernel!")
+print(f"Environment vars: {list(os.environ.keys())}")
+```
+
 **Kraftfile** (kraft's config — you'll generate this automatically later):
 ```yaml
 spec: v0.6
 runtime: python:3.11
 rootfs: ./Dockerfile
-cmd: ["/usr/bin/python3", "/app/agent.py"]
+cmd: ["/app/agent.py"]
 ```
 
 Build and run:
 ```bash
 kraft build --arch x86_64 --plat qemu
-kraft run --arch x86_64 --plat qemu --memory 512Mi
+kraft run --arch x86_64 --plat qemu
 ```
-
-### Step 1.3 — Deploy code to the Linux box and test
-
-**On your Mac** — create the tarball and upload:
-```bash
-cd /Users/earlperry/Desktop/Projects/enclaiv
-tar czf /tmp/enclaiv.tar.gz --exclude='.git' --exclude='bin' --exclude='.ruff_cache' --exclude='.claude' --exclude='__pycache__' .
-gcloud compute scp /tmp/enclaiv.tar.gz enclaiv-dev:~/enclaiv.tar.gz --zone=us-central1-a
-```
-
-**On the Linux box** — extract, install Docker + BuildKit, build everything:
-```bash
-# Extract the code
-mkdir -p ~/enclaiv && cd ~/enclaiv && tar xzf ~/enclaiv.tar.gz
-
-# Install Docker
-sudo apt install -y docker.io
-sudo usermod -aG docker $USER
-newgrp docker
-
-# Start BuildKit (kraft needs this to process Dockerfiles)
-docker run -d --name buildkitd --privileged moby/buildkit:latest
-export KRAFTKIT_BUILDKIT_HOST=docker-container://buildkitd
-echo 'export KRAFTKIT_BUILDKIT_HOST=docker-container://buildkitd' >> ~/.bashrc
-
-# Build the Go proxy
-cd ~/enclaiv/proxy && go build -o ~/enclaiv/bin/enclaiv-proxy cmd/proxy/main.go
-
-# Start the proxy in background
-cd ~/enclaiv
-mkdir -p bin
-cp bin/allowlist.json bin/credentials.json . 2>/dev/null || true
-./bin/enclaiv-proxy --config allowlist.json --cred-config credentials.json &
-
-# Build and run the unikernel
-mkdir -p ~/test-agent && cd ~/test-agent
-cat > agent.py << 'EOF'
-print("Hello from inside the unikernel!")
-import os
-print(f"Environment vars: {list(os.environ.keys())}")
-EOF
-cat > Dockerfile << 'EOF'
-FROM python:3.11-slim
-COPY agent.py /app/agent.py
-WORKDIR /app
-CMD ["python3", "/app/agent.py"]
-EOF
-cat > Kraftfile << 'EOF'
-spec: v0.6
-runtime: python:3.11
-rootfs: ./Dockerfile
-cmd: ["/usr/bin/python3", "/app/agent.py"]
-EOF
-
-kraft build --arch x86_64 --plat qemu
-kraft run --arch x86_64 --plat qemu --memory 512Mi
-```
-
-**Success:** You see `Hello from inside the unikernel!` — a Python agent ran inside a hardware-isolated VM on KVM.
 
 **Success:** You see `Hello from inside the unikernel!` printed to your terminal.
 

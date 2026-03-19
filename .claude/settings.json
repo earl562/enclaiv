@@ -1,0 +1,41 @@
+{
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm *)",
+      "Bash(npx *)",
+      "Bash(npm run *)",
+      "Bash(go build *)",
+      "Bash(go test *)",
+      "Bash(go vet *)",
+      "Bash(pip install *)",
+      "Bash(enclaiv *)",
+      "Bash(gcloud compute *)",
+      "Bash(curl http://localhost:*)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git checkout *)",
+      "Bash(git init *)",
+      "Bash(gh *)",
+      "Bash(ls *)",
+      "Bash(vercel *)",
+      "Bash(kill *)",
+      "Bash(pkill *)",
+      "WebSearch",
+      "WebFetch(domain:unikraft.org)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:unikraft.cloud)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)"
+    ]
+  }
+}
