@@ -39,7 +39,11 @@ async def init_db() -> None:
     global _pool
     _pool = await asyncpg.create_pool(_DATABASE_URL, min_size=2, max_size=10)
     async with _pool.acquire() as conn:
-        await conn.execute(_CREATE_SESSIONS_TABLE)
+        try:
+            await conn.execute(_CREATE_SESSIONS_TABLE)
+        except asyncpg.exceptions.UniqueViolationError:
+            # Two workers racing on startup — schema already applied, safe to ignore.
+            pass
 
 
 async def close_db() -> None:
