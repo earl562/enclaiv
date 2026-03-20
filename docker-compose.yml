@@ -47,6 +47,7 @@ services:
     environment:
       - DATABASE_URL=postgres://enclaiv:enclaiv@db:5432/enclaiv?sslmode=disable
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - PROXY_ADDR=proxy:9080
     depends_on:
