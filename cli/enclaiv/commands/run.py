@@ -88,7 +88,11 @@ def _create_session(
 # ---------------------------------------------------------------------------
 
 
-def _run_docker_fallback(config: EnclaivConfig, task: str, manager: ProxyManager) -> int:
+def _run_docker_fallback(
+    config: EnclaivConfig,
+    task: str,
+    session: SessionInfo,
+) -> int:
     """Run the agent in a Docker container (--local mode)."""
     image_tag = f"enclaiv-{config.name}:local"
 
@@ -101,21 +105,25 @@ def _run_docker_fallback(config: EnclaivConfig, task: str, manager: ProxyManager
         console.print("[red]Docker build failed.[/red]")
         return build_result.returncode
 
-    env_args: list[str] = []
-    for cred in config.credentials:
-        if cred.source == "env":
-            value = os.environ.get(cred.name, "")
-            env_args += ["-e", f"{cred.name}={value}"]
+    # On Linux, host.docker.internal is not automatic — add it explicitly.
+    # The agent inside Docker uses this to reach the control plane on the host.
+    host_gateway = ["--add-host", "host.docker.internal:host-gateway"]
 
-    proxy_env = [
-        "-e", f"HTTP_PROXY=http://host.docker.internal:{9080}",
-        "-e", f"HTTPS_PROXY=http://host.docker.internal:{9080}",
+    env_args = [
+        "-e", f"SESSION_TOKEN={session.session_token}",
+        "-e", f"SESSION_ID={session.session_id}",
+        "-e", "CONTROL_PLANE_URL=http://host.docker.internal:8080",
         "-e", f"ENCLAIV_TASK={task}",
+        "-e", "HTTP_PROXY=http://host.docker.internal:9080",
+        "-e", "HTTPS_PROXY=http://host.docker.internal:9080",
     ]
 
-    console.print("[bold]Running agent in Docker…[/bold]")
+    console.print(
+        f"[bold]Running agent in Docker…[/bold] "
+        f"(session={session.session_id[:8]}…)"
+    )
     run_result = subprocess.run(
-        ["docker", "run", "--rm", *proxy_env, *env_args, image_tag],
+        ["docker", "run", "--rm", *host_gateway, *env_args, image_tag],
         check=False,
     )
     return run_result.returncode
@@ -300,37 +308,24 @@ def run(
         console.print(f"[red]Error writing Kraftfile:[/red] {exc}")
         raise typer.Exit(code=1) from exc
 
-    # 3. Create session on the control plane (skipped in --local mode).
-    session: Optional[SessionInfo] = None
-    if not local:
-        console.print(
-            f"[dim]Creating session on control plane ({control_plane})…[/dim]"
-        )
-        try:
-            session = _create_session(config, task, control_plane)
-            console.print(
-                f"[dim]Session created: {session.session_id[:8]}…[/dim]"
-            )
-        except typer.BadParameter as exc:
-            console.print(f"[red]Control plane error:[/red] {exc}")
-            raise typer.Exit(code=1) from exc
+    # 3. Create session on the control plane (always — local mode uses it too).
+    console.print(
+        f"[dim]Creating session on control plane ({control_plane})…[/dim]"
+    )
+    try:
+        session = _create_session(config, task, control_plane)
+        console.print(f"[dim]Session created: {session.session_id[:8]}…[/dim]")
+    except typer.BadParameter as exc:
+        console.print(f"[red]Control plane error:[/red] {exc}")
+        raise typer.Exit(code=1) from exc
 
-    # 4. Start proxies and run
+    # 4. Run (Docker local or Unikraft VM)
     exit_code = 0
     try:
-        with _managed_proxies(config, skip=no_proxy or local) as manager:
-            if local:
-                if manager is None:
-                    tmp_manager = ProxyManager(
-                        allowed_domains=config.sandbox.network.allow,
-                        denied_domains=config.sandbox.network.deny,
-                        credentials=resolve_credentials(config.credentials),
-                    )
-                else:
-                    tmp_manager = manager
-                exit_code = _run_docker_fallback(config, task, tmp_manager)
-            else:
-                assert session is not None  # always set when not local
+        if local:
+            exit_code = _run_docker_fallback(config, task, session)
+        else:
+            with _managed_proxies(config, skip=no_proxy) as _manager:
                 kraft = _require_kraft()
                 rc = _run_kraft_build(kraft, config)
                 if rc != 0:
