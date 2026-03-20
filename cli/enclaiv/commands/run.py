@@ -116,6 +116,8 @@ def _run_docker_fallback(
         "-e", f"ENCLAIV_TASK={task}",
         "-e", "HTTP_PROXY=http://host.docker.internal:9080",
         "-e", "HTTPS_PROXY=http://host.docker.internal:9080",
+        # Exclude the control plane from proxy routing — agents call it directly.
+        "-e", "NO_PROXY=host.docker.internal,localhost,127.0.0.1",
     ]
 
     console.print(
