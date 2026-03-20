@@ -58,7 +58,7 @@ def _create_session(
     payload = {
         "agent_name": config.name,
         "task": task,
-        "model": getattr(config, "model", "claude-sonnet-4-6"),
+        "model": getattr(config, "model", "gemini-2.5-flash"),
     }
     try:
         with httpx.Client(timeout=15.0) as client:

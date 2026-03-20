@@ -35,7 +35,7 @@ class MessageRole(str, Enum):
 class CreateSessionRequest(BaseModel):
     agent_name: str = Field(..., min_length=1, max_length=128)
     task: str = Field(..., min_length=1)
-    model: str = Field(default="claude-sonnet-4-6")
+    model: str = Field(default="gemini-2.5-flash")
 
 
 class SessionResponse(BaseModel):
