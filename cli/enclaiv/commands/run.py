@@ -174,12 +174,23 @@ def _run_kraft_run(
     # The VM receives exactly three credentials — nothing else.
     # enclaiv_runner.py reads them, wipes them from the environment,
     # then calls the agent.  The actual API key stays on the control plane.
+    # Translate localhost/127.0.0.1 in the control-plane URL to the QEMU host
+    # IP so the VM can actually reach it over user-mode networking.
+    cp_url = (
+        session.control_plane_url
+        .replace("localhost", host_ip)
+        .replace("127.0.0.1", host_ip)
+    )
+
     vm_env = (
         f"SESSION_TOKEN={session.session_token},"
         f"SESSION_ID={session.session_id},"
-        f"CONTROL_PLANE_URL={session.control_plane_url},"
+        f"CONTROL_PLANE_URL={cp_url},"
         f"HTTP_PROXY=http://{host_ip}:9080,"
         f"HTTPS_PROXY=http://{host_ip}:9080,"
+        # Exclude the host IP from proxy routing so the LLM call goes directly
+        # to the control plane without passing through the allowlist proxy.
+        f"NO_PROXY={host_ip},"
         f"ENCLAIV_TASK={task}"
     )
     console.print(

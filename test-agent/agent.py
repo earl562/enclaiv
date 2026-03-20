@@ -11,7 +11,7 @@ import sys
 import urllib.request
 
 SESSION_TOKEN = os.environ.get("SESSION_TOKEN", "")
-CONTROL_PLANE_URL = os.environ.get("CONTROL_PLANE_URL", "http://host.docker.internal:8080")
+CONTROL_PLANE_URL = os.environ.get("CONTROL_PLANE_URL", "http://10.0.2.2:8080")
 TASK = os.environ.get("ENCLAIV_TASK", "Say hello in one sentence.")
 
 # ---------------------------------------------------------------------------
