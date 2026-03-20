@@ -22,6 +22,7 @@ func NewServer(store *ViolationStore, port int) *Server {
 // It blocks until the server exits and returns any error.
 func (s *Server) ListenAndServe() error {
 	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.HandleFunc("/violations", s.handleViolations)
 
 	addr := fmt.Sprintf(":%d", s.port)

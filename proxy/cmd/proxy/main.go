@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 
 	"github.com/enclaiv/enclaiv/proxy/pkg/allowlist"
@@ -25,11 +26,22 @@ type allowlistConfig struct {
 type credConfig map[string]credentials.Credential
 
 func main() {
+	healthcheck := flag.Bool("healthcheck", false, "run a single health check against the local violations API and exit")
 	port := flag.Int("port", 9080, "HTTP proxy listen port")
 	configPath := flag.String("config", "", "path to allowlist JSON config")
 	credConfigPath := flag.String("cred-config", "", "path to credentials JSON config")
 	violationsPort := flag.Int("violations-port", 9081, "violations API listen port")
 	flag.Parse()
+
+	// Health-check mode: hit /healthz and exit with the right code.
+	// Used by Docker HEALTHCHECK since the container runs FROM scratch.
+	if *healthcheck {
+		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/healthz", *violationsPort))
+		if err != nil || resp.StatusCode != http.StatusOK {
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 
 	setupLogging()
 

@@ -29,7 +29,7 @@ services:
       - PROXY_ADDR=:9080
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:9081/healthz"]
+      test: ["CMD", "/enclaiv-proxy", "-healthcheck"]
       interval: 10s
       timeout: 5s
       retries: 3
