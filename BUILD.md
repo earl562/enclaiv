@@ -23,6 +23,43 @@ An open-source platform that runs every AI agent in its own hardware-isolated vi
 
 ---
 
+## Current Status
+
+| Phase | Status | Blocker |
+|-------|--------|---------|
+| Environment Setup | ✅ Complete | — |
+| Phase 1 — Unikraft VM | 🔄 Partial | enclaiv.yaml parser + `enclaiv run` command missing |
+| Phase 2 — Network Proxy | 🔄 Partial | `kraft net create` fails — bridge driver not found (VM ↔ proxy routing blocked) |
+| Phase 3 — Credential Proxy + Hardening | ⬜ Not started | Phase 2 blocker must be resolved first |
+| Phase 4 — Violations + CLI | ✅ Complete | — |
+
+---
+
+## Next Steps
+
+**Step 1 — Fix Linux box** _(prerequisite for everything else)_
+- Upgrade Go to 1.22+ — `apt` default installs 1.18, needs manual install from [go.dev/dl](https://go.dev/dl)
+- Install Docker + BuildKit
+- Clone the repo on the Linux box
+
+**Step 2 — Fix kraft networking** _(Phase 2 blocker)_
+- Debug `kraft net create` bridge driver error
+- Try: `sudo apt install bridge-utils`
+- Try: `kraft net ls` and `kraft net create --driver=bridge`
+- Goal: VM `HTTP_PROXY` traffic routes through the Go proxy running on the host
+
+**Step 3 — Complete Phase 1** _(enclaiv run)_
+- Write `enclaiv.yaml` parser (`cli/enclaiv/config.py`)
+- Write Kraftfile generator (`cli/enclaiv/kraftfile.py`)
+- Wire `enclaiv run` to call `kraft build` + `kraft run`
+
+**Step 4 — Phase 3: Credential Injection**
+- Week-1 shortcut: HTTP-only first (no TLS) — get header injection working end-to-end
+- Then add TLS MITM (root CA generation, cert signing, VM trust store)
+- Then hardening (bytecode-only, privilege drop, env stripping)
+
+---
+
 ## Environment Setup (Do This First)
 
 ### macOS (your machine — daily development)

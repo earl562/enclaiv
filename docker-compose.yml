@@ -5,9 +5,8 @@ version: "3.9"
 # ---------------------------------------------------------------------------
 # Services:
 #   proxy         — Go allowlist proxy (ports 9080 HTTP, 9081 metrics)
-#   control-plane — Go/Python control plane API (port 8080)
-#   db            — PostgreSQL 16 (port 5432)
-#   redis         — Redis 7 (port 6379)
+#   control-plane — FastAPI control plane; holds API keys, proxies LLM calls (port 8080)
+#   db            — PostgreSQL 16 — sessions, messages, audit log (port 5432)
 #   prometheus    — Prometheus metrics scraper (port 9090)
 #   grafana       — Grafana dashboards (port 3000)
 # ---------------------------------------------------------------------------
@@ -36,7 +35,8 @@ services:
       retries: 3
 
   # -------------------------------------------------------------------------
-  # Control plane — orchestrates VM lifecycle and session management.
+  # Control plane — orchestrates VM lifecycle and proxies LLM calls.
+  # API keys live here; they never enter the sandbox VM.
   # -------------------------------------------------------------------------
   control-plane:
     build:
@@ -46,14 +46,11 @@ services:
       - "8080:8080"
     environment:
       - DATABASE_URL=postgres://enclaiv:enclaiv@db:5432/enclaiv?sslmode=disable
-      - REDIS_URL=redis://redis:6379/0
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - LOG_LEVEL=${LOG_LEVEL:-info}
-      - SESSION_TOKEN_SECRET=${SESSION_TOKEN_SECRET:-change-me-in-production}
       - PROXY_ADDR=proxy:9080
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
@@ -81,22 +78,6 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-
-  # -------------------------------------------------------------------------
-  # Redis 7 — session state cache and pub/sub for VM events.
-  # -------------------------------------------------------------------------
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
 
   # -------------------------------------------------------------------------
   # Prometheus — scrapes proxy /metrics and control-plane /metrics.
@@ -141,6 +122,5 @@ services:
 # ---------------------------------------------------------------------------
 volumes:
   db_data:
-  redis_data:
   prometheus_data:
   grafana_data:
