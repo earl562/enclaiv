@@ -20,7 +20,7 @@ def _runtime_to_cmd(runtime: str) -> list[str]:
     """Derive a sensible default CMD from the runtime string."""
     lang = runtime.split(":")[0].lower()
     if lang == "python":
-        return ["/usr/bin/python3", "/app/agent.py"]
+        return ["/usr/bin/python3", "/app/agent.pyc"]
     if lang == "node":
         return ["/usr/bin/node", "/app/agent.js"]
     if lang == "go":
