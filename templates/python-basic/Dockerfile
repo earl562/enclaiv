@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 # Install dependencies before copying code so Docker can cache this layer.
 WORKDIR /app

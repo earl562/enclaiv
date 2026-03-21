@@ -182,20 +182,27 @@ def _run_kraft_run(
         .replace("127.0.0.1", host_ip)
     )
 
-    vm_env = (
-        f"SESSION_TOKEN={session.session_token},"
-        f"SESSION_ID={session.session_id},"
-        f"CONTROL_PLANE_URL={cp_url},"
-        f"HTTP_PROXY=http://{host_ip}:9080,"
-        f"HTTPS_PROXY=http://{host_ip}:9080,"
+    # kraft's --env flag uses comma as a delimiter within a single value, so
+    # pass each variable as a separate --env flag to avoid ambiguity with
+    # values that contain commas or colons (e.g. URLs).
+    env_pairs = [
+        f"SESSION_TOKEN={session.session_token}",
+        f"SESSION_ID={session.session_id}",
+        f"CONTROL_PLANE_URL={cp_url}",
+        f"HTTP_PROXY=http://{host_ip}:9080",
+        f"HTTPS_PROXY=http://{host_ip}:9080",
         # Exclude the host IP from proxy routing so the LLM call goes directly
         # to the control plane without passing through the allowlist proxy.
-        f"NO_PROXY={host_ip},"
-        f"ENCLAIV_TASK={task}"
-    )
+        f"NO_PROXY={host_ip}",
+        f"ENCLAIV_TASK={task}",
+    ]
+    env_args = []
+    for pair in env_pairs:
+        env_args.extend(["--env", pair])
+
     console.print(
         f"[bold]Booting unikernel VM[/bold] "
-        f"(memory={memory_flag}, proxy={host_ip}:9080, "
+        f"(memory={memory_flag}, network=kraft0, "
         f"session={session.session_id[:8]}…)…"
     )
     result = subprocess.run(
@@ -205,7 +212,8 @@ def _run_kraft_run(
             "--arch", "x86_64",
             "--plat", "qemu",
             "--memory", memory_flag,
-            "--env", vm_env,
+            "--network", "kraft0",
+            *env_args,
         ],
         check=False,
     )
@@ -215,15 +223,30 @@ def _run_kraft_run(
 def _detect_host_ip() -> str:
     """Return the host IP visible from inside the QEMU guest.
 
-    On macOS/QEMU, this is always 10.0.2.2 (QEMU default gateway).
-    On Linux/KVM, it is the KVM bridge IP (typically 192.168.122.1).
+    On Linux with kraft0 bridge networking the host gateway is the kraft0
+    bridge IP (172.19.0.1 by default).  On macOS QEMU user-mode networking
+    uses 10.0.2.2.
     """
     if sys.platform == "darwin":
         return "10.0.2.2"
-    # Linux — check for KVM bridge
-    kvm_bridge = Path("/sys/class/net/virbr0/address")
-    if kvm_bridge.exists():
-        return "192.168.122.1"
+    # Linux — read kraft0 bridge IP from the kernel sysfs
+    kraft0_addr = Path("/sys/class/net/kraft0/ifindex")
+    if kraft0_addr.exists():
+        # Get the IP address assigned to kraft0
+        try:
+            import subprocess as _sp
+            out = _sp.check_output(
+                ["ip", "-4", "addr", "show", "kraft0"],
+                text=True,
+            )
+            for line in out.splitlines():
+                line = line.strip()
+                if line.startswith("inet "):
+                    return line.split()[1].split("/")[0]
+        except Exception:
+            pass
+        return "172.19.0.1"  # kraft0 default
+    # Fallback to QEMU user-mode gateway
     return "10.0.2.2"
 
 
