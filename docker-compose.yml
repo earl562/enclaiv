@@ -38,6 +38,23 @@ services:
       retries: 3
 
   # -------------------------------------------------------------------------
+  # Web console — Next.js frontend (marketing site + /console agent UI).
+  # -------------------------------------------------------------------------
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - CONTROL_PLANE_URL=http://control-plane:8080
+      - PORT=3001
+    depends_on:
+      control-plane:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # -------------------------------------------------------------------------
   # Control plane — orchestrates VM lifecycle and proxies LLM calls.
   # API keys live here; they never enter the sandbox VM.
   # -------------------------------------------------------------------------

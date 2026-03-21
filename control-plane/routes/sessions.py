@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from db import acquire
 from models import (
     CreateSessionRequest,
+    Message,
     SessionResponse,
     SessionStateResponse,
     SessionStatus,
@@ -80,6 +81,33 @@ async def create_session(body: CreateSessionRequest) -> SessionResponse:
     )
 
 
+@router.get("", response_model=list[SessionStateResponse])
+async def list_sessions(limit: int = 50) -> list[SessionStateResponse]:
+    """Return recent sessions ordered by created_at DESC."""
+    async with acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM sessions ORDER BY created_at DESC LIMIT $1",
+            limit,
+        )
+    result = []
+    for row in rows:
+        messages_raw = row["messages"]
+        if isinstance(messages_raw, str):
+            messages = json.loads(messages_raw)
+        else:
+            messages = messages_raw
+        result.append(SessionStateResponse(
+            id=str(row["id"]),
+            agent_name=row["agent_name"],
+            task=row["task"],
+            model=row["model"],
+            status=SessionStatus(row["status"]),
+            created_at=row["created_at"],
+            messages=messages,
+        ))
+    return result
+
+
 @router.get("/{session_id}", response_model=SessionStateResponse)
 async def get_session(
     session_id: str,
@@ -115,3 +143,28 @@ async def get_session(
         created_at=row["created_at"],
         messages=messages,
     )
+
+
+@router.post("/{session_id}/messages", status_code=status.HTTP_204_NO_CONTENT)
+async def append_session_messages(
+    session_id: str,
+    body: list[Message],
+    _token: str = Depends(_require_session_token),
+) -> None:
+    """Append messages to the session history (called by GUI after streaming)."""
+    try:
+        sid = uuid.UUID(session_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid session ID.") from exc
+
+    messages = [{"role": m.role.value, "content": m.content} for m in body]
+    async with acquire() as conn:
+        await conn.execute(
+            """
+            UPDATE sessions
+            SET messages = messages || $1::jsonb
+            WHERE id = $2
+            """,
+            json.dumps(messages),
+            sid,
+        )

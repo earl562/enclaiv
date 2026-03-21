@@ -29,6 +29,12 @@ export function Nav() {
             Products
           </a>
           <a
+            href="/console"
+            className="text-xs font-medium text-[#636366] transition-colors duration-200 hover:text-[#1C1C1E]"
+          >
+            Console
+          </a>
+          <a
             href="https://github.com/earl562/enclaiv"
             target="_blank"
             rel="noopener noreferrer"
