@@ -16,5 +16,5 @@ export async function POST(
     body: JSON.stringify(messages),
   });
 
-  return new Response(null, { status: res.ok ? 204 : res.status });
+  return new Response(null, { status: res.ok ? 200 : res.status });
 }

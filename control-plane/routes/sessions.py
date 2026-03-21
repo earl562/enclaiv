@@ -145,12 +145,12 @@ async def get_session(
     )
 
 
-@router.post("/{session_id}/messages", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/{session_id}/messages")
 async def append_session_messages(
     session_id: str,
     body: list[Message],
     _token: str = Depends(_require_session_token),
-) -> None:
+) -> dict:
     """Append messages to the session history (called by GUI after streaming)."""
     try:
         sid = uuid.UUID(session_id)
@@ -168,3 +168,4 @@ async def append_session_messages(
             json.dumps(messages),
             sid,
         )
+    return {}
