@@ -29,7 +29,7 @@ services:
       - PROXY_ADDR=:9080
     volumes:
       - ./proxy/config:/config:ro
-    command: ["/enclaiv-proxy", "--port=9080", "--config=/config/allowlist.json", "--violations-port=9081"]
+    command: ["--port=9080", "--config=/config/allowlist.json", "--violations-port=9081"]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "/enclaiv-proxy", "-healthcheck"]
