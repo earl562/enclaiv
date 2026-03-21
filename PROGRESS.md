@@ -1,6 +1,6 @@
 # Enclaiv — Progress Tracker
 
-> Update this as you complete each step. Date each entry.
+> Updated 2026-03-21
 
 ---
 
@@ -24,48 +24,38 @@
 | Task | Status | Notes |
 |------|--------|-------|
 | Enable Compute Engine API | ✅ | Project: gen-lang-client-0929887998 |
-| Create enclaiv-dev instance | ✅ | n2-standard-2, us-central1-a, nested virt enabled |
-| Create firewall rule | ✅ | allow-ssh-enclaiv, tcp:22 |
+| Create enclaiv-dev instance | ✅ | n2-standard-2, us-central1-a, nested virt + KVM enabled |
+| Create firewall rules | ✅ | SSH (22), console (3001), control plane (8080) |
 | SSH into instance | ✅ | Ubuntu 22.04.5 LTS |
 | Verify /dev/kvm exists | ✅ | crw-rw---- confirmed — hardware isolation active |
-| Install Go on Linux box | ✅ | go1.18.1 linux/amd64 |
-| Install kraft on Linux box | ✅ | kraft 0.12.6, go1.25.7 (Mar 18) |
-| Upgrade Go to 1.22+ on Linux box | 🔄 | Default apt installs 1.18 — needs upgrade |
-| Install Docker + BuildKit on Linux box | 🔄 | Required for kraft build from Dockerfile |
-| Clone repo on Linux box | 🔄 | https://github.com/earl562/enclaiv |
+| Install Go 1.22+ on Linux box | ✅ | Upgraded from 1.18 → 1.22.5 |
+| Install kraft on Linux box | ✅ | kraft 0.12.6 |
+| Install Docker + BuildKit on Linux box | ✅ | docker + docker-buildx-plugin |
+| Clone repo on Linux box | ✅ | https://github.com/earl562/enclaiv |
+| Grow boot disk to 30 GB | ✅ | growpart + resize2fs online, 22 GB free |
+| Configure sudoers for kraft run | ✅ | /etc/sudoers.d/enclaiv-kraft — NOPASSWD for kraft run |
+| Provision Google AI API key | ✅ | Created via gcloud, scoped to generativelanguage.googleapis.com |
+| Persist API key | ✅ | ~/enclaiv/.env → loaded by docker compose --env-file |
 
 ### GitHub
 | Task | Status | Notes |
 |------|--------|-------|
 | Create GitHub repo | ✅ | https://github.com/earl562/enclaiv (public, Apache 2.0) |
-| Initial commit pushed | ✅ | 49 files, 5615 lines — CLI, proxy, hardening, infra |
-
-### Local Testing (macOS)
-| Task | Status | Notes |
-|------|--------|-------|
-| Build Go proxy binary | ✅ | bin/enclaiv-proxy (9.2MB) |
-| Proxy: allowed domain passes | ✅ | arxiv.org → 301 |
-| Proxy: blocked domain returns 403 | ✅ | evil.com → 403 Forbidden |
-| Proxy: wildcard matching works | ✅ | scholar.google.com → 302 (via *.google.com) |
-| Violations API returns blocked requests | ✅ | GET /violations → JSON with evil.com violation |
-| Install enclaiv CLI | ✅ | pip install -e . → enclaiv 0.1.0 |
-| enclaiv doctor | ✅ | kraft, Docker, Go, QEMU all ✓ |
-| enclaiv init | ✅ | Scaffolds agent.py, enclaiv.yaml, Dockerfile, requirements.txt |
-| enclaiv violations | ✅ | Rich table showing blocked requests from proxy |
+| Initial commit pushed | ✅ | CLI, proxy, hardening, infra |
 
 ---
 
-## Phase 1 — First Unikraft VM
+## Phase 1 — Unikraft VM
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Run pre-built Python unikernel (`kraft run unikraft.org/python3.12`) | ⬜ | Skipped — pre-built not available for qemu/x86_64 |
-| Create test-agent directory with Dockerfile + agent.py + Kraftfile | ✅ | FROM scratch + agent.py only (kraft provides Python runtime) |
-| `kraft build` custom unikernel | ✅ | Build: 2.0s, initramfs: 41B, runtime: python:3.12 |
-| `kraft run` — see output from inside VM | ✅ | "Hello from inside the unikernel!" on KVM, 2.5s total |
-| Write enclaiv.yaml parser (Python) | ⬜ | |
-| Write Kraftfile generator from enclaiv.yaml | ⬜ | |
-| `enclaiv run` invokes kraft build + run | ⬜ | |
+| Create test-agent with Dockerfile + agent.py + Kraftfile | ✅ | kraft provides Python 3.12 runtime |
+| `kraft build` custom unikernel | ✅ | Build: 2.0s, initramfs: 41B |
+| `kraft run` — output from inside VM | ✅ | "Hello from inside the unikernel!" on KVM, 2.5s total |
+| Write enclaiv.yaml parser | ✅ | cli/enclaiv/config.py |
+| Write Kraftfile generator from enclaiv.yaml | ✅ | cli/enclaiv/kraftfile.py |
+| `enclaiv run` invokes kraft build + run | ✅ | Wired in cli/enclaiv/commands/run.py |
+| `enclaiv run` prepends `sudo -E` on Linux | ✅ | Preserves env vars through sudo for CAP_NET_ADMIN |
 
 ---
 
@@ -73,90 +63,104 @@
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Go Tour completed (basics + goroutines) | ⬜ | |
 | Initialize Go module (`proxy/`) | ✅ | github.com/enclaiv/enclaiv/proxy |
 | HTTP CONNECT handler | ✅ | proxy/pkg/httpproxy/proxy.go |
 | Domain allowlist logic | ✅ | proxy/pkg/allowlist/allowlist.go |
 | Wildcard matching (`*.google.com`) | ✅ | Tested: scholar.google.com → 302 |
-| Proxy tested on Linux box (GCP) | ✅ | arxiv.org allowed, evil.com blocked with structured JSON logs |
-| VM traffic routed through proxy | 🔄 | Proxy works on Linux; VM boots but needs kraft bridge networking (kraft net create needs debugging — bridge driver not found) |
+| Violations API (GET /violations) | ✅ | Structured JSON logs per blocked request |
+| `enclaiv violations` CLI command | ✅ | Rich table output |
+| `enclaiv doctor` CLI command | ✅ | Checks kraft, Docker, Go, QEMU |
+| Proxy config via allowlist.json | ✅ | proxy/config/allowlist.json — arxiv.org, api.anthropic.com, Google APIs |
+| Proxy built and running in Docker | ✅ | docker compose service on ports 9080/9081 |
+| Docker ENTRYPOINT+CMD bug fixed | ✅ | command: must contain only flags, not binary path |
 | Allowed domain passes through | ✅ | arxiv.org → 301, scholar.google.com → 302 |
 | Blocked domain returns 403 | ✅ | evil.com → 403 Forbidden |
 
 ---
 
-## Phase 3 — Credential Proxy + Hardening (MVP)
+## Phase 3 — Control Plane
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Root CA generation at `enclaiv init` | ⬜ | |
-| CA installed in VM trust store during build | ⬜ | |
-| Credential proxy TLS termination | ⬜ | |
-| API key header injection (x-api-key) | ⬜ | |
-| Agent calls Anthropic without seeing key | ⬜ | |
-| Bytecode-only execution (.py deleted) | ⬜ | |
-| Mandatory deny paths stripped from rootfs | ⬜ | |
-| Privilege drop (root → nobody) | ⬜ | |
-| Environment stripping (SESSION_TOKEN deleted) | ⬜ | |
-
-**MVP complete when all Phase 3 tasks are ✅**
+| FastAPI project setup | ✅ | control-plane/main.py |
+| PostgreSQL schema: sessions table | ✅ | id, agent_name, task, model, session_token, status, created_at, messages (JSONB) |
+| Session lifecycle endpoints | ✅ | POST /sessions, GET /sessions, GET /sessions/{id} |
+| Append messages endpoint | ✅ | POST /sessions/{id}/messages |
+| LLM proxy endpoint | ✅ | POST /llm/complete — injects API key, never exposes it to VM |
+| Google Gemini provider | ✅ | gemini-* models → generativelanguage.googleapis.com |
+| Anthropic provider | ✅ | all other models → api.anthropic.com |
+| Streaming SSE (Google) | ✅ | Normalized to `{"type": "text_delta", "text": "..."}` format |
+| Streaming SSE (Anthropic) | ✅ | Raw pass-through of content_block_delta events |
+| Session token auth | ✅ | Bearer token validated on all protected endpoints |
+| Session wired into `enclaiv run` | ✅ | CLI creates session before kraft run, passes SESSION_TOKEN + CONTROL_PLANE_URL into VM |
+| ANTHROPIC_API_KEY never enters VM | ✅ | Only 3 env vars pass into VM: SESSION_TOKEN, CONTROL_PLANE_URL, TASK |
+| Healthcheck endpoint | ✅ | GET /healthz |
+| Docker container + Dockerfile | ✅ | Python 3.12, asyncpg, FastAPI |
+| FastAPI 204 body assertion fixed | ✅ | Append messages route uses 200 + return {} |
 
 ---
 
-## Phase 4 — Violation Tracking
+## Phase 4 — Agent Hardening
 
 | Task | Status | Notes |
 |------|--------|-------|
-| Violation store (in-memory) | ⬜ | |
-| Structured JSON logging per blocked request | ⬜ | |
-| REST endpoint on proxy: GET /violations | ⬜ | |
-| `enclaiv violations` CLI command | ⬜ | |
-| `enclaiv doctor` CLI command | ⬜ | |
+| `enclaiv_runner.py` in VM | ✅ | Strips env vars, configures proxy, runs agent via runpy |
+| Privilege drop in entrypoint.sh | ✅ | root → nobody |
+| Docker fallback mode | ✅ | `enclaiv run --local` runs agent in Docker container |
 
 ---
 
-## Phase 5 — Control Plane (skip for MVP)
+## Phase 5 — Web Console
 
 | Task | Status | Notes |
 |------|--------|-------|
-| FastAPI project setup | ⬜ | |
-| PostgreSQL: conversation history | ⬜ | |
-| Redis: rate limiting + session cache | ⬜ | |
-| API key auth | ⬜ | |
-| Gateway Protocol implementation | ⬜ | |
-| File sync via presigned GCS URLs | ⬜ | |
+| Next.js web app scaffolded | ✅ | web/ — App Router, TypeScript, Tailwind, Framer Motion |
+| Marketing site (landing page) | ✅ | /, hero, product sections, nav, footer |
+| Console route /console | ✅ | Full agent chat UI |
+| Session sidebar | ✅ | List all sessions, relative timestamps, active indicator |
+| New session modal | ✅ | Agent name, task, model selector (gemini-2.5-flash / claude-sonnet) |
+| Chat interface | ✅ | User messages (right, dark) + assistant messages (left, white) |
+| SSE streaming in browser | ✅ | Typing indicator → streaming text → committed message |
+| SSE error surfacing fix | ✅ | Error events now show as readable messages, not silent empty bubbles |
+| Empty response fallback | ✅ | Shows "Check API keys" message instead of blank bubble |
+| Cmd+Enter to send | ✅ | |
+| Auto-resize textarea | ✅ | |
+| Auto-scroll to latest message | ✅ | |
+| Session token map (client-side) | ✅ | Tokens stored in React state keyed by session ID |
+| BFF API routes | ✅ | /api/sessions, /api/sessions/[id], /api/sessions/[id]/chat, /api/sessions/[id]/messages |
+| CONTROL_PLANE_URL proxied via BFF | ✅ | Control plane URL never exposed to browser |
+| Next.js standalone output | ✅ | output: "standalone" in next.config.ts |
+| Web Dockerfile | ✅ | Multi-stage: node:20-alpine builder + production runner |
+| Console link in nav | ✅ | Nav bar → Console |
+| Web service in docker compose | ✅ | Port 3001, depends on control-plane healthcheck |
+| GCP firewall rule for port 3001 | ✅ | enclaiv-web-console |
+| Full stack deployed and running | ✅ | http://34.61.100.189:3001/console |
+| End-to-end agent response confirmed | ✅ | gemini-2.5-flash streaming through control plane to browser |
 
 ---
 
-## Phase 6 — Docker Fallback + CI/CD + OTel (skip for MVP)
+## Observability
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `enclaiv run --local` (Docker mode) | ⬜ | |
-| GitHub Actions: Go tests | ⬜ | |
-| GitHub Actions: Python tests | ⬜ | |
-| GitHub Actions: integration test | ⬜ | |
-| OpenTelemetry distributed tracing | ⬜ | |
+| Prometheus scraper | ✅ | Port 9090 — scrapes proxy /metrics + control-plane /metrics |
+| Grafana dashboards | ✅ | Port 3000 — admin/admin |
+| Proxy violations metrics | ✅ | Exposed on port 9081 |
+| Alert rules | ✅ | monitoring/alerts.yml |
 
 ---
 
-## Phase 7 — Launch (skip for MVP)
+## What's Next
 
-| Task | Status | Notes |
-|------|--------|-------|
-| README with architecture diagram | ⬜ | |
-| Getting started guide | ⬜ | |
-| Demo video | ⬜ | |
-| Hacker News Show HN | ⬜ | |
-
----
-
-## Blockers / Open Questions
-
-| Issue | Status |
-|-------|--------|
-| Go version on Linux is 1.18 — may need 1.22+ for some features | ⬜ investigate |
-| kraft bridge networking: `kraft net create` fails with "no such network: bridge" even with sudo | 🔄 | May need `bridge-utils` or different kraft network driver |
+| Task | Priority | Notes |
+|------|----------|-------|
+| kraft bridge networking on GCP | High | kraft0 bridge needed for VM ↔ proxy routing; fallback to QEMU user-mode (10.0.2.2) works |
+| VPC egress firewall rules | High | Block VM egress except → control plane :8080 |
+| End-to-end unikernel smoke test | High | `enclaiv run` → VM → control plane → Gemini → browser |
+| Bytecode hardening (compileall) | Medium | Delete .py files from VM image, run .pyc only |
+| Multi-turn conversation in VM | Medium | Agent SDK calling /llm/complete in a loop |
+| Session status updates (active → done) | Medium | Mark session complete when agent exits |
+| Anthropic API key | Low | Set ANTHROPIC_API_KEY for Claude model support |
 
 ---
 
@@ -168,5 +172,16 @@
 | 2026-03-18 | Full codebase built: CLI (Python), Proxy (Go), hardening, infra |
 | 2026-03-18 | Proxy tested locally: allowed/blocked/wildcard domains all work |
 | 2026-03-18 | CLI tested: `enclaiv doctor`, `enclaiv init`, `enclaiv violations` all work |
-| 2026-03-18 | First unikernel running on KVM! "Hello from inside the unikernel!" — Unikraft Kiviuq 0.20.0 |
-| 2026-03-18 | Proxy built and tested on Linux box: arxiv.org allowed, evil.com blocked with structured violation logs |
+| 2026-03-18 | First unikernel running on KVM — "Hello from inside the unikernel!" |
+| 2026-03-18 | Proxy built and tested on Linux box: arxiv.org allowed, evil.com blocked |
+| 2026-03-20 | Control plane built: FastAPI + PostgreSQL, session lifecycle, LLM proxy with streaming |
+| 2026-03-20 | `enclaiv run` wired to control plane: creates session before kraft run |
+| 2026-03-20 | docker-compose updated: Redis removed, web service added, proxy config wired |
+| 2026-03-20 | Fixed proxy Docker ENTRYPOINT+CMD bug — allowlist.json now loads correctly |
+| 2026-03-20 | GCP boot disk grown 9.6 GB → 30 GB online (growpart + resize2fs) |
+| 2026-03-20 | kraft run now uses `sudo -E` on Linux for CAP_NET_ADMIN |
+| 2026-03-20 | Web console built: full chat UI at /console with SSE streaming |
+| 2026-03-20 | FastAPI 204 body assertion fixed, full stack deployed to GCP |
+| 2026-03-21 | Fixed SSE error surfacing — silent empty bubbles replaced with error messages |
+| 2026-03-21 | Provisioned Google AI API key via gcloud, persisted to ~/enclaiv/.env |
+| 2026-03-21 | End-to-end confirmed: agent responds via gemini-2.5-flash through control plane |
