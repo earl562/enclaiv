@@ -22,46 +22,56 @@ const descVariants = {
   },
 }
 
-function SectionDivider() {
-  return (
-    <div className="mx-auto w-full max-w-5xl px-6">
-      <div className="h-px bg-gradient-to-r from-transparent via-[#D1D1D6]/50 to-transparent" />
-    </div>
-  )
-}
-
 interface ProductSectionProps {
   title: string
   description: string
   visual: React.ReactNode
   bgClass: string
+  align: "left" | "right"
 }
 
-function ProductSection({ title, description, visual, bgClass }: ProductSectionProps) {
+function ProductSection({ title, description, visual, bgClass, align }: ProductSectionProps) {
   return (
     <section className={bgClass}>
-      <div className="mx-auto max-w-3xl px-6 py-28 md:py-40">
-        <motion.h2
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
-          variants={headingVariants}
-          className="text-center font-sans text-3xl font-bold leading-[1.08] tracking-tighter text-[#1C1C1E] md:text-5xl"
-        >
-          {title}
-        </motion.h2>
-        <motion.p
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.3 }}
-          variants={descVariants}
-          className="mx-auto mt-5 max-w-[42ch] text-center text-[15px] leading-relaxed text-[#636366]"
-        >
-          {description}
-        </motion.p>
+      <div className="max-w-5xl px-6 py-28 md:py-36" style={{ marginInline: "auto" }}>
+        <div className="grid grid-cols-1 items-center gap-16 md:grid-cols-2">
 
-        <div className="mt-14">
-          {visual}
+          {/* Text column */}
+          <div className={align === "right" ? "md:order-last" : ""}>
+            <motion.h2
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+              variants={headingVariants}
+              className="font-sans text-3xl font-bold leading-[1.08] tracking-tighter text-[#1C1C1E] md:text-5xl"
+            >
+              {title}
+            </motion.h2>
+            <motion.p
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true, amount: 0.3 }}
+              variants={descVariants}
+              className="mt-5 max-w-[42ch] text-[15px] leading-relaxed text-[#636366]"
+            >
+              {description}
+            </motion.p>
+          </div>
+
+          {/* Visual column — double-bezel shell */}
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94] as const, delay: 0.2 }}
+          >
+            <div className="p-1.5 rounded-[20px] border border-[#D1D1D6]/30 bg-[#F2F2F7]/50">
+              <div className="rounded-[14px] overflow-hidden bg-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.8)]">
+                {visual}
+              </div>
+            </div>
+          </motion.div>
+
         </div>
       </div>
     </section>
@@ -71,12 +81,11 @@ function ProductSection({ title, description, visual, bgClass }: ProductSectionP
 export function ProductSections() {
   return (
     <div id="products">
-      <SectionDivider />
-
       <ProductSection
         title="Network Proxy"
         description="Every outbound request routes through a Go proxy. Allowed domains pass. Everything else is blocked and logged."
         bgClass="bg-[#F8F9FA]"
+        align="left"
         visual={
           <AnimatedTerminal
             lines={[
@@ -93,12 +102,11 @@ export function ProductSections() {
         }
       />
 
-      <SectionDivider />
-
       <ProductSection
         title="Credential Injection"
         description="API keys are injected outside the VM boundary. The agent makes requests normally — the key is added after the request leaves the sandbox."
         bgClass="bg-white"
+        align="right"
         visual={
           <AnimatedTerminal
             lines={[
@@ -116,14 +124,13 @@ export function ProductSections() {
         }
       />
 
-      <SectionDivider />
-
       <ProductSection
         title="Unikernel Isolation"
         description="No shell. No SSH. No package manager. Each VM boots in under 50ms with a ~5MB footprint. Hardware boundaries, not process boundaries."
         bgClass="bg-[#F8F9FA]"
+        align="left"
         visual={
-          <div className="flex flex-col gap-8">
+          <div className="flex flex-col gap-8 p-6">
             <AnimatedBars
               header="ATTACK SURFACE"
               items={[
@@ -144,12 +151,11 @@ export function ProductSections() {
         }
       />
 
-      <SectionDivider />
-
       <ProductSection
         title="Violation Tracking"
         description="Every blocked request is structured JSON. Query violations by agent, session, or destination. Full audit trail."
         bgClass="bg-white"
+        align="right"
         visual={
           <AnimatedTerminal
             lines={[

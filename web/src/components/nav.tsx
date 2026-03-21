@@ -11,9 +11,9 @@ export function Nav() {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ ...springGentle, delay: 0.1 }}
-      className="fixed top-0 left-0 right-0 z-50 border-b border-[#D1D1D6]/40 bg-white/70 backdrop-blur-xl"
+      className="fixed top-6 left-1/2 z-50 -translate-x-1/2 rounded-full border border-[#D1D1D6]/40 bg-white/70 backdrop-blur-xl shadow-[0_2px_16px_rgba(0,0,0,0.04)]"
     >
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
+      <div className="flex items-center gap-6 px-5 py-2.5">
         <a href="/" className="flex items-center gap-2.5">
           <EnclaivLogo size={22} className="text-[#1C1C1E]" />
           <span className="font-mono text-sm font-semibold tracking-wider text-[#1C1C1E]">

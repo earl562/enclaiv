@@ -33,7 +33,7 @@ export function Footer() {
 
   return (
     <footer className="border-t border-[#D1D1D6]/40 bg-white py-16">
-      <div className="mx-auto max-w-5xl px-6">
+      <div className="max-w-5xl px-6" style={{ marginInline: "auto" }}>
         <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
           <div>
             <div className="flex items-center gap-2 mb-3">
