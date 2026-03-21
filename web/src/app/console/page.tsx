@@ -72,6 +72,14 @@ async function readSSEStream(
 
       try {
         const parsed = JSON.parse(data);
+        // Error payload from control plane or upstream API — surface it
+        if (parsed.error !== undefined) {
+          const msg =
+            typeof parsed.error === "string"
+              ? parsed.error
+              : (parsed.error?.message ?? JSON.stringify(parsed.error));
+          throw new Error(msg);
+        }
         // Google normalized format
         if (parsed.type === "text_delta" && typeof parsed.text === "string") {
           onChunk(parsed.text);
@@ -84,8 +92,9 @@ async function readSSEStream(
         ) {
           onChunk(parsed.delta.text);
         }
-      } catch {
-        // malformed JSON — skip silently
+      } catch (e) {
+        if (e instanceof SyntaxError) continue; // malformed JSON — skip
+        throw e; // re-throw error events
       }
     }
   }
@@ -530,7 +539,10 @@ export default function ConsolePage() {
     }
 
     // Commit the streamed response
-    const assistantMessage: Message = { role: "assistant", content: accumulated };
+    const assistantMessage: Message = {
+      role: "assistant",
+      content: accumulated || "[No response received. Check that GOOGLE_API_KEY / ANTHROPIC_API_KEY are set on the control plane.]",
+    };
     const finalMessages: Message[] = [...allMessages, assistantMessage];
     setMessages(finalMessages);
     setStreamingText("");
