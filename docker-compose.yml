@@ -27,6 +27,9 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-info}
       - METRICS_ADDR=:9081
       - PROXY_ADDR=:9080
+    volumes:
+      - ./proxy/config:/config:ro
+    command: ["/enclaiv-proxy", "--port=9080", "--config=/config/allowlist.json", "--violations-port=9081"]
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "/enclaiv-proxy", "-healthcheck"]

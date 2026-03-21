@@ -1,0 +1,11 @@
+{
+  "allowed": [
+    "arxiv.org",
+    "export.arxiv.org",
+    "api.anthropic.com",
+    "generativelanguage.googleapis.com"
+  ],
+  "denied": [
+    "evil.com"
+  ]
+}

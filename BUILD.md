@@ -35,7 +35,7 @@ filtering and credential injection via the control plane.
 | Unikraft unikernel build | ✅ Complete | `kraft build` + `kraft run` on GCP KVM |
 | End-to-end smoke test | ✅ Complete | Unikernel → control plane → Gemini 2.5 Flash |
 | Bytecode hardening | ✅ Complete | `.py` deleted, only `.pyc` in VM rootfs |
-| Network filter | ✅ Complete | Both arxiv.org and evil.com BLOCKED |
+| Network filter | ✅ Complete | Allowlist via `proxy/config/allowlist.json`; undeclared domains blocked |
 | API key isolation | ✅ Complete | No API key ever enters the VM |
 
 ---
@@ -108,6 +108,22 @@ kraft run --env "SESSION_TOKEN=..." --env "CONTROL_PLANE_URL=http://..."
 # WRONG — CONTROL_PLANE_URL gets truncated at the colon
 kraft run --env "SESSION_TOKEN=...,CONTROL_PLANE_URL=http://..."
 ```
+
+### Proxy allowlist configuration
+
+The Go proxy reads `proxy/config/allowlist.json` at startup (mounted as `/config/allowlist.json`
+in the Docker container). Edit this file to control which domains the agent can reach:
+
+```json
+{
+  "allowed": ["arxiv.org", "api.anthropic.com", "generativelanguage.googleapis.com"],
+  "denied":  ["evil.com"]
+}
+```
+
+Restart the proxy after editing: `docker compose restart proxy`
+
+The `denied` list takes precedence over `allowed`. An empty `allowed` list means deny-all.
 
 ### VPC firewall rules (multi-instance production only)
 

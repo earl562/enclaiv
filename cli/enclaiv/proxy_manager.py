@@ -69,6 +69,9 @@ class ProxyManager:
 
     def start_network_proxy(self) -> ProxyProcess:
         """Launch the network (allowlist) proxy."""
+        import json
+        import tempfile
+
         binary = shutil.which(self.network_proxy_bin)
         if binary is None:
             raise ProxyError(
@@ -77,13 +80,26 @@ class ProxyManager:
                 "or set ENCLAIV_PROXY_BIN to the correct path."
             )
 
-        allow_arg = ",".join(self.allowed_domains)
-        deny_arg = ",".join(self.denied_domains)
+        # The proxy binary accepts --config <json-file>, not --allow/--deny flags.
+        # Write a temp config file for this run and pass its path.
+        config_data = {
+            "allowed": list(self.allowed_domains),
+            "denied": list(self.denied_domains),
+        }
+        tmp = tempfile.NamedTemporaryFile(
+            mode="w",
+            suffix=".json",
+            prefix="enclaiv-proxy-",
+            delete=False,
+        )
+        json.dump(config_data, tmp)
+        tmp.close()
+        config_path = tmp.name
+
         cmd = [
             binary,
             f"--port={NETWORK_PROXY_PORT}",
-            f"--allow={allow_arg}",
-            f"--deny={deny_arg}",
+            f"--config={config_path}",
         ]
 
         console.print(
