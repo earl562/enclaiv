@@ -205,8 +205,15 @@ def _run_kraft_run(
         f"(memory={memory_flag}, network=kraft0, "
         f"session={session.session_id[:8]}…)…"
     )
+    # kraft needs CAP_NET_ADMIN to create a tap interface on Linux.
+    # Use 'sudo -E' to preserve the caller's environment (API tokens etc.)
+    # while elevating privileges.  On macOS, QEMU user-mode networking does
+    # not require elevated privileges, so we skip sudo there.
+    cmd_prefix = [] if sys.platform == "darwin" else ["sudo", "-E"]
+
     result = subprocess.run(
         [
+            *cmd_prefix,
             kraft,
             "run",
             "--arch", "x86_64",
